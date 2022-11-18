@@ -18,9 +18,9 @@ const pool = new Pool({
  */
 const getUserWithEmail = function(email) {
   return pool
-    .query(`SELECT * FROM users WHERE email = $1`, [email])
+    .query(`SELECT * FROM users WHERE email = $1;`, [email])
     .then((result) => {
-      console.log(result.rows[0]);
+      console.log('getuserwithemail :::', result.rows[0]);
       return result.rows[0];
     })
     .catch((err) => {
@@ -36,10 +36,10 @@ exports.getUserWithEmail = getUserWithEmail;
  */
 const getUserWithId = function(id) {
   return pool
-    .query(`SELECT users.id FROM users WHERE users.id = $1`, [id])
+    .query(`SELECT * FROM users WHERE users.id = $1;`, [id])
     .then((result) => {
-      console.log(result.rows[0]);
-      return result.rows[0];
+      console.log('getUSerwithID :::', result.rows[0].id);
+      return result.rows[0].id;
     })
     .catch((err) => {
       console.log(err.message);
@@ -59,8 +59,8 @@ const addUser =  function(user) {
     VALUES ($1, $2, $3) RETURNING *;
     `, [user.name, user.email, user.password])
     .then((result) => {
-      console.log(result.rows[0]);
-      return result.rows[0];
+      console.log('adduser :::', result.rows);
+      return result.rows;
     })
     .catch((err) => {
       console.log(err.message);
@@ -71,12 +71,29 @@ exports.addUser = addUser;
 /// Reservations
 
 /**
+ *  avg(rating) as average_rating
  * Get all reservations for a single user.
  * @param {string} guest_id The id of the user.
  * @return {Promise<[{}]>} A promise to the reservations.
  */
 const getAllReservations = function(guest_id, limit = 10) {
-  return getAllProperties(null, 2);
+  return pool
+    .query(`SELECT reservations.*, properties.*, users.*
+    FROM reservations
+    JOIN properties ON reservations.property_id = properties.id
+    JOIN property_reviews ON properties.id = property_reviews.property_id
+    JOIN users ON reservations.guest_id = users.id
+    WHERE reservations.guest_id = $1
+    GROUP BY properties.id, reservations.id, users.id
+    ORDER BY reservations.start_date
+    LIMIT $2;`, [guest_id, limit])
+    .then((result) => {
+      console.log('GAresos :::', result.rows);
+      return result.rows;
+    })
+    .catch((err) => {
+      console.log('GAresos err', err.message);
+    });
 }
 exports.getAllReservations = getAllReservations;
 
@@ -91,9 +108,9 @@ exports.getAllReservations = getAllReservations;
  const getAllProperties = (options, limit = 10) => {
 
   return pool
-    .query(`SELECT * FROM properties LIMIT $1`, [limit])
+    .query(`SELECT * FROM properties LIMIT $1;`, [limit])
     .then((result) => {
-      console.log(result.rows);
+      console.log('GAprops :::', result.rows);
       return result.rows;
     })
     .catch((err) => {
